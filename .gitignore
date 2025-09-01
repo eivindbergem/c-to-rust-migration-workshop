@@ -45,3 +45,7 @@
 # build dir
 build
 tags
+
+# Added by cargo
+
+/target

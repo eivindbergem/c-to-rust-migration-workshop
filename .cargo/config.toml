@@ -1,0 +1,13 @@
+[target.'cfg(all(target_arch = "arm", target_os = "none"))']
+runner = 'probe-rs run --chip STM32F103C8'
+linker = "arm-none-eabi-gcc"
+rustflags = [
+  "-C", "link-arg=-lc",
+  "-C", "link-arg=-lnosys",
+  "-C", "link-arg=-mcpu=cortex-m3",
+  "-C", "link-arg=-mabi=aapcs",
+  "-C", "link-arg=-Ttoolchain/STM32F103VB_FLASH.ld",
+]
+
+[build]
+target = "thumbv7m-none-eabi"
