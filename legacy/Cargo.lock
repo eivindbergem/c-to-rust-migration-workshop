@@ -38,10 +38,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34efbcccd345379ca2868b2b2c9d3782e9cc58ba87bc7d79d5b53d9c9ae6f25d"
 
 [[package]]
-name = "blinky"
+name = "bluepill-blinky"
 version = "0.1.0"
 dependencies = [
- "legacy",
+ "bindgen",
+ "cc",
  "panic-halt",
 ]
 
@@ -99,15 +100,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
 dependencies = [
  "either",
-]
-
-[[package]]
-name = "legacy"
-version = "0.1.0"
-dependencies = [
- "bindgen",
- "cc",
- "panic-halt",
 ]
 
 [[package]]
