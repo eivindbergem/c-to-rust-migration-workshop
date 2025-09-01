@@ -5,19 +5,21 @@ fn main() {
     let hal_path = cube_path.join("Drivers/STM32F1xx_HAL_Driver");
     let rtos_path = cube_path.join("Middlewares/Third_Party/FreeRTOS");
 
+    let includes = [
+        Path::new("blinky/include"),
+        &rtos_path.join("Source/portable/GCC/ARM_CM3"),
+        &rtos_path.join("Source/CMSIS_RTOS"),
+        &rtos_path.join("Source/include"),
+        &cube_path.join("Drivers/CMSIS/Device/ST/STM32F1xx/Include"),
+        &cube_path.join("Drivers/CMSIS/Include"),
+        &cube_path.join("Drivers/CMSIS/RTOS/Template"),
+        &hal_path.join("Inc"),
+    ];
+
     cc::Build::new()
         .define("STM32F103xB", None)
         .define("USE_HAL_LIBRARY", None)
-        .includes([
-            Path::new("blinky/include"),
-            &rtos_path.join("Source/portable/GCC/ARM_CM3"),
-            &rtos_path.join("Source/CMSIS_RTOS"),
-            &rtos_path.join("Source/include"),
-            &cube_path.join("Drivers/CMSIS/Device/ST/STM32F1xx/Include"),
-            &cube_path.join("Drivers/CMSIS/Include"),
-            &cube_path.join("Drivers/CMSIS/RTOS/Template"),
-            &hal_path.join("Inc"),
-        ])
+        .includes(includes)
         .files(
             Path::new("blinky/src")
                 .read_dir()
@@ -84,5 +86,5 @@ fn main() {
             .into_iter()
             .map(|path| rtos_path.join("Source").join(path)),
         )
-        .compile("blinky");
+        .compile("legacy");
 }

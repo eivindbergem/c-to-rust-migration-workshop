@@ -1,0 +1,8 @@
+[package]
+name = "blinky"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+legacy = { version = "0.1.0", path = "../legacy" }
+panic-halt = "1.0.0"
