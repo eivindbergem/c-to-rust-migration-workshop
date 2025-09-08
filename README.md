@@ -1,44 +1,54 @@
 # Migrating an embedded C application to Rust
 
-## Part 5 – Rustifying blinky task
+## Part 6 – Use `stm32f1xx_hal`
 
-In this part we will convert the blinky task to Rust.
+Rust has an embedded ecosystem with native support for a large number
+of microcontrollers. These are pure Rust crates, and are not just
+wrappers around the vendor libraries. In this part we will replace the
+STM32Cube HAL with `stm32f1xx_hal`.
 
-### GPIO abstraction
+### Add `stm32f1xx_hal`
 
-The Rust embedded ecosystem provides some [useful
-abstractions](https://docs.rs/embedded-hal/latest/embedded_hal/) for
-common peripherals such as GPIO, I2C and SPI. We will use the
-[`OutputPin`](https://docs.rs/embedded-hal/latest/embedded_hal/digital/trait.OutputPin.html)
-trait.
-
-Add `embedded_hal` to `blinky`:
-
-```Console
-cargo add embedded-hal
+Add the `stm32f1xx_hal` crate with the `stm32f103` feature:
+```console
+cargo add stm32f1xx_hal -F stm32f103
 ```
 
-Create a `struct` called `Pin` that holds the port and pin
-id. Implement the `OutputPin` trait for this struct. Use the STM32 HAL
-C functions to do GPIO operations.
+### GPIO
 
-### Stateful pin
+Modify the `Pin` struct to be generic over an `OutputPin`. It should
+have a constructor – `Pin::new()` – that takes an `OutputPin` as an
+argument.
 
-We want to toggle the pin, without having to keep track of the pin
-state in the blinky function. We can use
-[`StatefulOutputPin`](https://docs.rs/embedded-hal/latest/embedded_hal/digital/trait.StatefulOutputPin.html)
-for this.
+In `main()`, get the output pin from `stm32f1xx_hal`:
 
-Implement `StatfulOutputPin` for `Pin`. We have to add a field to keep
-track of the pin state. We can use
-[`PinState`](https://docs.rs/embedded-hal/latest/embedded_hal/digital/enum.PinState.html)
-for this.
+```Rust
+    let dp = pac::Peripherals::take().unwrap();
+    let mut rcc = dp.RCC.constrain();
+    let mut gpioc = dp.GPIOC.split(&mut rcc);
 
-### Blinky task
+    let pin = gpioc.pc13.into_push_pull_output(&mut gpioc.crh);
+```
 
-In `main.rs`, write a [generic
-function](https://doc.rust-lang.org/rust-by-example/generics.html)
-that takes a generic pin `P` that implements `StatefulOutputPin`. Use
-the `toggle()` method to toggle the pin.
+Now, pass this output pin as an argument to `Pin::new()`, and pass
+this object as the argument to the blinky task.
 
-Create a `Pin` and pass it to the new blinky task.
+### Clock config
+
+We also have the `SystemClock_Config()` function in `main.c` that we
+want to replace. In `FreeRTOSConfig.h`, the clock is hardcoded to
+72MHz, so we need to configure the clock to run at this rate. The
+original clock config in C is a bit opaque, but it translates to:
+
+- Use HSE – extern oscillator. The crystal on the blue pill runs at 8MHz.
+- Multiply the HSE with 9 using the PLL, to arrive at 72MHz.
+- PCLK1 is the system clock divided by two, giving us 36MHz.
+- PCLK2 is the same as the system clock.
+
+Use
+[`Rcc::freeze`](https://docs.rs/stm32f1xx-hal/latest/stm32f1xx_hal/rcc/struct.Rcc.html#method.freeze)
+to configure the clock.
+
+### Remove unused code
+
+We can now remove unused code in `main.c`.

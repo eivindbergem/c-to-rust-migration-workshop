@@ -9,15 +9,6 @@ int _write(int file, char *ptr, int len) {
     return len;
 }
 
-void vBlinkTask(void *pvParameters) {
-
-  const TickType_t delay = pdMS_TO_TICKS(500);
-  for (;;) {
-    HAL_GPIO_TogglePin(led_GPIO_Port, led_Pin);
-    vTaskDelay(delay);
-  }
-}
-
 void vPrintTask(void *pvParameters) {
   for (;;) {
     printf("Hello world\n");

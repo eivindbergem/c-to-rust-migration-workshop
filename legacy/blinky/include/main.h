@@ -5,7 +5,7 @@
 #include "stm32f1xx.h"
 #include "stm32f1xx_hal_conf.h"
 #define led_Pin GPIO_PIN_13
-#define led_GPIO_Port GPIOC
+#define led_GPIO_Port GPIOC_BASE
 void SystemClock_Config(void);
 void Error_Handler(void);
 void vBlinkTask(void *pvParameters);
