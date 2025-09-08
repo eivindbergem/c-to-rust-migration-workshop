@@ -1,67 +1,44 @@
 # Migrating an embedded C application to Rust
 
-## Part 4 - Use `freertos_rust` bindings
+## Part 5 – Rustifying blinky task
 
-Interacting with the FreeRTOS C API is not very ergonomical. Luckily
-for us, there is a crate with [safe Rust bindings to
-FreeRTOS](https://docs.rs/freertos-rust/latest/freertos_rust/).
+In this part we will convert the blinky task to Rust.
 
-### Setting up `freertos_rust`
+### GPIO abstraction
 
-Add `freertos_rust` as a dependency to the `blinky` crate:
+The Rust embedded ecosystem provides some [useful
+abstractions](https://docs.rs/embedded-hal/latest/embedded_hal/) for
+common peripherals such as GPIO, I2C and SPI. We will use the
+[`OutputPin`](https://docs.rs/embedded-hal/latest/embedded_hal/digital/trait.OutputPin.html)
+trait.
 
-```console
-$ cargo add freertos_rust
+Add `embedded_hal` to `blinky`:
+
+```Console
+cargo add embedded-hal
 ```
 
-In `legacy/build.rs`, build the FreeRTOS shim together with the legacy
-library. Add this line to `cc::Builder`:
+Create a `struct` called `Pin` that holds the port and pin
+id. Implement the `OutputPin` trait for this struct. Use the STM32 HAL
+C functions to do GPIO operations.
 
-```Rust
-.file(PathBuf::from(env::var("DEP_FREERTOS_SHIM").unwrap()).join("shim.c"))
-```
+### Stateful pin
 
-`freertos_rust` uses the heap allocated version variant of FreeRTOS
-and requires us to configure the FreeRTOS heap as the global Rust
-allocator. The [allocator
-API](https://doc.rust-lang.org/beta/unstable-book/library-features/allocator-api.html)
-is currently unstable, so we need to use the nightly compiler. Add a
-file called `rust-toolchain.toml` with the following contents in the
-project root:
+We want to toggle the pin, without having to keep track of the pin
+state in the blinky function. We can use
+[`StatefulOutputPin`](https://docs.rs/embedded-hal/latest/embedded_hal/digital/trait.StatefulOutputPin.html)
+for this.
 
-```
-[toolchain]
-channel = "nightly"
-```
+Implement `StatfulOutputPin` for `Pin`. We have to add a field to keep
+track of the pin state. We can use
+[`PinState`](https://docs.rs/embedded-hal/latest/embedded_hal/digital/enum.PinState.html)
+for this.
 
-In addition, we have to enable the unstable feature, by adding this to `main.rs`:
+### Blinky task
 
-```Rust
-#![feature(allocator_api)]
-```
+In `main.rs`, write a [generic
+function](https://doc.rust-lang.org/rust-by-example/generics.html)
+that takes a generic pin `P` that implements `StatefulOutputPin`. Use
+the `toggle()` method to toggle the pin.
 
-Now, we can add the allocator in `main.rs`:
-
-```Rust
-#[global_allocator]
-static GLOBAL: FreeRtosAllocator = FreeRtosAllocator;
-```
-
-I'm not sure why, but after switching to `freertos_rust` we get
-linking errors complaining about missing `abort`. We can define it in `main.rs` to make it go away:
-
-```Rust
-#[unsafe(no_mangle)]
-pub extern "C" fn abort() -> ! {
-    loop {}
-}
-```
-
-### Using `freertos_rust`
-
-Now, we can start converting the calls to `xTaskCreate()` and
-`vTaskStartScheduler()` to their `freertos_rust` counter parts. We'll
-leave the task functions themselves in C. Note that the FreeRTOS tasks
-in C takes an argument, but the ones in Rust don't. We can use a
-[closure](https://doc.rust-lang.org/book/ch20-04-advanced-functions-and-closures.html)
-to call the C function with a NULL pointer.
+Create a `Pin` and pass it to the new blinky task.

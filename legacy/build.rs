@@ -89,6 +89,7 @@ fn main() {
             .into_iter()
             .map(|path| rtos_path.join("Source").join(path)),
         )
+        .file(PathBuf::from(env::var("DEP_FREERTOS_SHIM").unwrap()).join("shim.c"))
         .compile("legacy");
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
