@@ -41,6 +41,7 @@ checksum = "34efbcccd345379ca2868b2b2c9d3782e9cc58ba87bc7d79d5b53d9c9ae6f25d"
 name = "blinky"
 version = "0.1.0"
 dependencies = [
+ "freertos-rust",
  "legacy",
  "panic-halt",
 ]
@@ -87,6 +88,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 
 [[package]]
+name = "freertos-rust"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ed4d1f7356542cd640004f488cc41358ced96b1efab1fead3753d868a93d504"
+
+[[package]]
 name = "glob"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -107,6 +114,7 @@ version = "0.1.0"
 dependencies = [
  "bindgen",
  "cc",
+ "freertos-rust",
  "panic-halt",
 ]
 

@@ -1,12 +1,17 @@
 #![no_std]
 #![no_main]
+#![feature(allocator_api)]
 
 use core::ptr;
 
+use freertos_rust::{FreeRtosAllocator, FreeRtosUtils, Task};
 use legacy::{
-    configMINIMAL_STACK_SIZE, vBlinkTask, vPrintTask, vTaskStartScheduler, xTaskCreate, HAL_Init,
-    MX_GPIO_Init, SEGGER_RTT_Init, SystemClock_Config,
+    configMINIMAL_STACK_SIZE, vBlinkTask, vPrintTask, HAL_Init, MX_GPIO_Init, SEGGER_RTT_Init,
+    SystemClock_Config,
 };
+
+#[global_allocator]
+static GLOBAL: FreeRtosAllocator = FreeRtosAllocator;
 
 extern crate panic_halt;
 
@@ -19,27 +24,28 @@ fn main() -> ! {
         MX_GPIO_Init();
 
         SEGGER_RTT_Init();
-
-        xTaskCreate(
-            Some(vBlinkTask),
-            c"blink".as_ptr(),
-            3 * configMINIMAL_STACK_SIZE as u16,
-            ptr::null_mut(),
-            3,
-            ptr::null_mut(),
-        );
-
-        xTaskCreate(
-            Some(vPrintTask),
-            c"semi".as_ptr(),
-            2 * configMINIMAL_STACK_SIZE as u16,
-            ptr::null_mut(),
-            2,
-            ptr::null_mut(),
-        );
-
-        vTaskStartScheduler();
-
-        loop {}
     }
+
+    Task::new()
+        .name("blink")
+        .stack_size(2 * configMINIMAL_STACK_SIZE as u16)
+        .start(|| unsafe {
+            vBlinkTask(ptr::null_mut());
+        })
+        .unwrap();
+
+    Task::new()
+        .name("print")
+        .stack_size(2 * configMINIMAL_STACK_SIZE as u16)
+        .start(|| unsafe {
+            vPrintTask(ptr::null_mut());
+        })
+        .unwrap();
+
+    FreeRtosUtils::start_scheduler()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn abort() -> ! {
+    loop {}
 }
