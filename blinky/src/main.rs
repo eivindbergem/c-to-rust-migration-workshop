@@ -7,9 +7,11 @@ use core::ptr;
 use embedded_hal::digital::StatefulOutputPin;
 use freertos_rust::{CurrentTask, Duration, FreeRtosAllocator, FreeRtosUtils, Task};
 use gpio::Pin;
-use legacy::{
-    configMINIMAL_STACK_SIZE, led_GPIO_Port, led_Pin, vPrintTask, GPIO_TypeDef, HAL_Init,
-    MX_GPIO_Init, SEGGER_RTT_Init, SystemClock_Config,
+use legacy::{configMINIMAL_STACK_SIZE, vPrintTask, SEGGER_RTT_Init};
+use stm32f1xx_hal::{
+    pac,
+    prelude::*,
+    rcc::{Config, RccExt},
 };
 
 mod gpio;
@@ -33,15 +35,22 @@ where
 #[unsafe(no_mangle)]
 fn main() -> ! {
     unsafe {
-        HAL_Init();
-
-        SystemClock_Config();
-        MX_GPIO_Init();
-
         SEGGER_RTT_Init();
     }
 
-    let led = Pin::new(led_GPIO_Port as *mut GPIO_TypeDef, led_Pin as u16);
+    let dp = pac::Peripherals::take().unwrap();
+    let mut flash = dp.FLASH.constrain();
+    let mut rcc = dp.RCC.constrain().freeze(
+        Config::DEFAULT
+            .use_hse(8.MHz())
+            .sysclk(72.MHz())
+            .pclk1(36.MHz())
+            .pclk2(72.MHz()),
+        &mut flash.acr,
+    );
+
+    let mut gpioc = dp.GPIOC.split(&mut rcc);
+    let led = Pin::new(gpioc.pc13.into_push_pull_output(&mut gpioc.crh));
 
     Task::new()
         .name("blink")
