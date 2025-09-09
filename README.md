@@ -1,54 +1,34 @@
 # Migrating an embedded C application to Rust
 
-## Part 6 – Use `stm32f1xx_hal`
+## Part 7 – Rustify the print task
 
-Rust has an embedded ecosystem with native support for a large number
-of microcontrollers. These are pure Rust crates, and are not just
-wrappers around the vendor libraries. In this part we will replace the
-STM32Cube HAL with `stm32f1xx_hal`.
+All that remains in `main.c` is the print task.
 
-### Add `stm32f1xx_hal`
+### Printing
 
-Add the `stm32f1xx_hal` crate with the `stm32f103` feature:
-```console
-cargo add stm32f1xx_hal -F stm32f103
-```
+In the C code, we use newlib with a custom `_write()` that calls the
+RTT write function, which allows us to use `printf()`. In Rust, we
+want to be able to use `println!()`, just like in the standard
+library. Rust does not have variadic functions, so `println!()` is
+implemented as a macro.
 
-### GPIO
+First, start with creating a unit struct – i.e. a struct with no
+body. Implement `core::fmt::Write` for this struct. The `write_str()`
+method should do the writing to RTT. Implementing this trait allows us
+to use the
+[`writeln!()`](https://doc.rust-lang.org/std/macro.writeln.html)
+macro.
 
-Modify the `Pin` struct to be generic over an `OutputPin`. It should
-have a constructor – `Pin::new()` – that takes an `OutputPin` as an
-argument.
+Write a [macro](https://doc.rust-lang.org/rust-by-example/macros.html)
+ – `println!()` – that takes 0 or more arguments and passes them on to
+ the `writeln!()`. Note that the trait – `core::fmt::Write` – must be
+ in scope when `writeln!()` is called. It should be added to the scope
+ by the macro in an
+ [hygienic](https://danielkeep.github.io/tlborm/book/mbe-min-hygiene.html)
+ way.
 
-In `main()`, get the output pin from `stm32f1xx_hal`:
+### Print task
 
-```Rust
-    let dp = pac::Peripherals::take().unwrap();
-    let mut rcc = dp.RCC.constrain();
-    let mut gpioc = dp.GPIOC.split(&mut rcc);
-
-    let pin = gpioc.pc13.into_push_pull_output(&mut gpioc.crh);
-```
-
-Now, pass this output pin as an argument to `Pin::new()`, and pass
-this object as the argument to the blinky task.
-
-### Clock config
-
-We also have the `SystemClock_Config()` function in `main.c` that we
-want to replace. In `FreeRTOSConfig.h`, the clock is hardcoded to
-72MHz, so we need to configure the clock to run at this rate. The
-original clock config in C is a bit opaque, but it translates to:
-
-- Use HSE – extern oscillator. The crystal on the blue pill runs at 8MHz.
-- Multiply the HSE with 9 using the PLL, to arrive at 72MHz.
-- PCLK1 is the system clock divided by two, giving us 36MHz.
-- PCLK2 is the same as the system clock.
-
-Use
-[`Rcc::freeze`](https://docs.rs/stm32f1xx-hal/latest/stm32f1xx_hal/rcc/struct.Rcc.html#method.freeze)
-to configure the clock.
-
-### Remove unused code
-
-We can now remove unused code in `main.c`.
+Move the print task to Rust and use the `println!()` macro you
+implemented in the previous section. We can now remove the print task
+and `_write()` stub from `main.c`.
