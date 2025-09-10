@@ -9,9 +9,7 @@ file(GLOB rtos_sources ${rtos_path}/Source/*.c)
 add_executable(
   ${PROJECT_NAME}.elf
   src/main.c
-  src/stm32f1xx_it.c
-  src/stm32f1xx_hal_msp.c
-  src/stm32f1xx_hal_timebase_tim.c
+  src/SEGGER_RTT.c
   ${cube_path}/Drivers/CMSIS/Device/ST/${MCU_FAMILY}/Source/Templates/system_stm32f1xx.c
   ${cube_path}/Drivers/CMSIS/Device/ST/${MCU_FAMILY}/Source/Templates/gcc/startup_stm32f103xb.s
   ${hal_sources}
@@ -23,8 +21,8 @@ add_executable(
 target_compile_definitions(${PROJECT_NAME}.elf
                            PUBLIC ${MCU_LINE} USE_HAL_LIBRARY STM32F103xB)
 
-target_compile_options(${PROJECT_NAME}.elf PRIVATE --specs=rdimon.specs)
-target_link_options(${PROJECT_NAME}.elf PRIVATE -lc -lrdimon)
+target_compile_options(${PROJECT_NAME}.elf PRIVATE --specs=nosys.specs)
+target_link_options(${PROJECT_NAME}.elf PRIVATE -lc)
 
 target_include_directories(
   ${PROJECT_NAME}.elf

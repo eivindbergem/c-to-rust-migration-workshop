@@ -1,7 +1,13 @@
 #include "main.h"
 #include "task.h"
 #include <stdio.h>
-extern void initialise_monitor_handles(void);
+#include "SEGGER_RTT.h"
+
+int _write(int file, char *ptr, int len) {
+    (void)file;  // stdout only
+    SEGGER_RTT_Write(0, ptr, len);
+    return len;
+}
 
 void vBlinkTask(void *pvParameters) {
 
@@ -12,22 +18,9 @@ void vBlinkTask(void *pvParameters) {
   }
 }
 
-TIM_HandleTypeDef g_us_timer;
-
-static inline volatile uint32_t get_us_tick(void) {
-  return __HAL_TIM_GET_COUNTER(&g_us_timer);
-}
-
-static inline void delay_us(const uint32_t us) {
-  const uint32_t tickstart = get_us_tick();
-  uint32_t wait = us;
-  while ((get_us_tick() - tickstart) < wait) {
-  }
-}
-
-void vSemi(void *pvParameters) {
+void vPrintTask(void *pvParameters) {
   for (;;) {
-    printf("Hello world \n");
+    printf("Hello world\n");
     vTaskDelay(pdMS_TO_TICKS(2000));
   }
 }
@@ -40,13 +33,13 @@ int main(void) {
 
   SystemClock_Config();
   MX_GPIO_Init();
-  MX_TIM1_Init();
-  initialise_monitor_handles();
+
+  SEGGER_RTT_Init();
 
   xTaskCreate(vBlinkTask, "blink", 2*configMINIMAL_STACK_SIZE, NULL,
               3, NULL);
 
-  xTaskCreate(vSemi, "semi", 2*configMINIMAL_STACK_SIZE, NULL,
+  xTaskCreate(vPrintTask, "semi", 3*configMINIMAL_STACK_SIZE, NULL,
               2, NULL);
 
   vTaskStartScheduler();
@@ -85,35 +78,6 @@ void SystemClock_Config(void) {
   }
 }
 
-static void MX_TIM1_Init(void) {
-
-  TIM_ClockConfigTypeDef clock_source = {0};
-  TIM_MasterConfigTypeDef master = {0};
-
-  g_us_timer.Instance = TIM1;
-  g_us_timer.Init.Prescaler = ((72000000 / 1000000)) - 1;
-  g_us_timer.Init.CounterMode = TIM_COUNTERMODE_UP;
-  g_us_timer.Init.Period = 0xFFFFFFFF;
-  g_us_timer.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  g_us_timer.Init.RepetitionCounter = 0;
-  g_us_timer.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&g_us_timer) != HAL_OK) {
-    Error_Handler();
-  }
-  clock_source.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&g_us_timer, &clock_source) != HAL_OK) {
-    Error_Handler();
-  }
-  master.MasterOutputTrigger = TIM_TRGO_RESET;
-  master.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&g_us_timer, &master) != HAL_OK) {
-    Error_Handler();
-  }
-
-  if (HAL_TIM_Base_Start(&g_us_timer) != HAL_OK)
-    Error_Handler();
-}
-
 /**
  * @brief GPIO Initialization Function
  * @param None
@@ -139,12 +103,6 @@ static void MX_GPIO_Init(void) {
 
 }
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-  if (htim->Instance == TIM2) {
-    HAL_IncTick();
-  }
-}
-
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 }
 
@@ -152,10 +110,3 @@ void Error_Handler(void) {
   for (;;)
     ;
 }
-
-#ifdef USE_FULL_ASSERT
-void assert_failed(uint8_t *file, uint32_t line) {
-  for (;;)
-    ;
-}
-#endif

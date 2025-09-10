@@ -42,7 +42,7 @@ set(CMAKE_ASM_FLAGS_DEBUG
     "-g"
     CACHE INTERNAL "asm compiler flags debug")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG
-    "-Xlinker -Map=output.map --specs=rdimon.specs -lc -lrdimon"
+    "-Xlinker -Map=output.map --specs=nosys.specs -lc"
     CACHE INTERNAL "linker flags debug")
 
 set(CMAKE_C_FLAGS_RELEASE
