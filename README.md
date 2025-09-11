@@ -1,46 +1,87 @@
 # Migrating an embedded C application to Rust
 
-## Part 9 – Use `cortex-m-rt`
+## Part 10 – Full oxidation
 
-While we have migrated everything in `main.c`, we still use STM32Cube
-for startup files and linker script.
+We have now removed the dependency on STM32Cube. We still use FreeRTOS
+from Cube, but we could have replaced that with the regular
+FreeRTOS. However, FreeRTOS is still written in C, so our application
+is not fully in Rust.
 
-### `cortex-m-rt`
+### Embassy
 
-Add `cortex-m-rt` to `blinky`:
+Rust has support for [asynchronous
+functions](https://doc.rust-lang.org/book/ch17-00-async-await.html). They
+differ from threads:
+
+| | Thread / RTOS task | Async task |
+| --- | --- | --- |
+| Needs stack? | Yes | No |
+| Context switch? | Yes | No |
+| Pre-emption? | Yes | No |
+
+Async Rust uses lightweight co-operative tasks. As opposed to tasks in
+FreeRTOS, async tasks don't need a full stack. The memory needed for
+each task is known at compile time, and is equal to the memory needed
+to hold the state of the task at each await point.
+
+There are many async runtimes for Rust, but most of these use the
+standard library. We will use [`embassy`](https://embassy.dev/) –
+which is an async runtime and framework for embedded systems.
+
+`embassy` comes with batteries included, so it replaces both FreeRTOS
+and `stm32f1xx_hal`.
+
+Add embassy:
 
 ```console
-$ cargo add cortex-m-rt
+$ cargo add embassy-executor -F arch-cortex-m -F executor-thread
+$ cargo add embassy-stm32 -F memory-x -F stm32f103c8 -F time-driver-any
+$ cargo add embassy-time -F tick-hz-1_000
 ```
 
-Use the
-[`entry`](https://docs.rs/cortex-m-rt/latest/cortex_m_rt/attr.entry.html)
-attribute on the main function to denote the entry point.
+Remember to remove `stm32f1xx_hal` as it conflicts with `embassy-stm32`:
 
-In `.cargo/config.toml`, add the `cortex-m-rt` linker script:
-
-```
-  "-C", "link-arg=-Tlink.x",
+```console
+$ cargo remove stm32f1xx_hal
 ```
 
-`link.x` contains most of the linker script, but we need to specify
-the size of ram and flash for our specific microcontroller. In the
-project root, add the file `memory.x`:
+### Blinky task
 
-```
-MEMORY
-{
-  FLASH : ORIGIN = 0x08000000, LENGTH = 64K
-  RAM : ORIGIN = 0x20000000, LENGTH = 20K
-}
-```
+Rewrite the blinky task to be async. We can still use the
+`StatefulOutputPin`. There are no async GPIO traits, but they have
+been merge into main branch, but not released on crates.io yet. In
+this case, we know that the operations are not blocking so it's ok to
+use the blocking traits.
 
-### FreeRTOS interrupt handlers
+Now we can use the attribute `embassy_executor::task` to turn the
+async function into an embassy task. But, because of some current
+limitations in Rust we can't use generic types in tasks. We'd like to
+keep our task generic, so that we can add testing or port our
+application to a different microcontroller in the future. The solution
+is to split the task into two separate functions, one generic async
+function and a non-generic task that calls the generic function.
 
-The interrupt handler function names differ between `cortex-m-rt` and
-STM32Cube. Update `FreeRTOSConfig.h` with the [interrupt handlers from
-`cortex-m-rt`](https://docs.rs/cortex-m-rt/latest/cortex_m_rt/attr.exception.html).
+Replace the FreeRTOS delay function with
+[`Timer::after()`](https://docs.embassy.dev/embassy-time/git/default/struct.Timer.html)
 
-### Removed unused code
+### Print task
 
-We can now remove STM32Cube HAL and startup code. 
+The print task can more or less stay the same, just convert it into an
+embassy task.
+
+### Main
+
+Convert the main function to an async function. Add attribute
+[`embassy_executor::main`](https://docs.embassy.dev/embassy-executor/git/cortex-m/attr.main.html)
+to use embassy as the entry point.
+
+Use
+[`embassy_stm32::init()`](https://docs.embassy.dev/embassy-stm32/git/stm32f103c8/fn.init.html)
+to get the peripherals, and use
+[`Output::new()`](https://docs.embassy.dev/embassy-stm32/git/stm32f103c8/gpio/struct.Output.html)
+to get the output pin for the LED.
+
+Spawn the blinky and print tasks.
+
+Now we have a fully oxidized application and we can get rid of
+STM32Cube.

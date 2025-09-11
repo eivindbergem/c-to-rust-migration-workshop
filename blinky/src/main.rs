@@ -2,6 +2,7 @@
 #![no_main]
 #![feature(allocator_api)]
 
+use cortex_m_rt::entry;
 use defmt_rtt as _;
 use embedded_hal::digital::StatefulOutputPin;
 use freertos_rust::{CurrentTask, Duration, FreeRtosAllocator, FreeRtosUtils, Task};
@@ -38,7 +39,7 @@ fn print_task() {
     }
 }
 
-#[unsafe(no_mangle)]
+#[entry]
 fn main() -> ! {
     let dp = pac::Peripherals::take().unwrap();
     let mut flash = dp.FLASH.constrain();
@@ -67,9 +68,4 @@ fn main() -> ! {
         .unwrap();
 
     FreeRtosUtils::start_scheduler()
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn abort() -> ! {
-    loop {}
 }

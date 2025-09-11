@@ -62,6 +62,7 @@ checksum = "34efbcccd345379ca2868b2b2c9d3782e9cc58ba87bc7d79d5b53d9c9ae6f25d"
 name = "blinky"
 version = "0.1.0"
 dependencies = [
+ "cortex-m-rt",
  "defmt",
  "defmt-rtt",
  "embedded-hal 1.0.0",

@@ -118,16 +118,9 @@ header file. */
   }
 /* USER CODE END 1 */
 
-/* Definitions that map the FreeRTOS port interrupt handlers to their CMSIS
-standard names. */
-#define vPortSVCHandler SVC_Handler
-#define xPortPendSVHandler PendSV_Handler
-
-/* IMPORTANT: This define is commented when used with STM32Cube firmware, when
-   the timebase source is SysTick, to prevent overwriting SysTick_Handler
-   defined within STM32Cube HAL */
-
-#define xPortSysTickHandler SysTick_Handler
+#define vPortSVCHandler SVCall
+#define xPortPendSVHandler PendSV
+#define xPortSysTickHandler SysTick
 
 /* USER CODE BEGIN Defines */
 /* Section where parameter definitions can be added (for instance, to override
