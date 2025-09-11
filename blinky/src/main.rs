@@ -2,12 +2,10 @@
 #![no_main]
 #![feature(allocator_api)]
 
-use core::ptr;
-
 use embedded_hal::digital::StatefulOutputPin;
 use freertos_rust::{CurrentTask, Duration, FreeRtosAllocator, FreeRtosUtils, Task};
 use gpio::Pin;
-use legacy::{configMINIMAL_STACK_SIZE, vPrintTask, SEGGER_RTT_Init};
+use legacy::{configMINIMAL_STACK_SIZE, SEGGER_RTT_Init};
 use stm32f1xx_hal::{
     pac,
     prelude::*,
@@ -15,6 +13,7 @@ use stm32f1xx_hal::{
 };
 
 mod gpio;
+mod rtt;
 
 #[global_allocator]
 static GLOBAL: FreeRtosAllocator = FreeRtosAllocator;
@@ -29,6 +28,13 @@ where
         led.toggle().unwrap();
 
         CurrentTask::delay(Duration::ms(500));
+    }
+}
+
+fn print_task() {
+    loop {
+        println!("Hello world");
+        CurrentTask::delay(Duration::ms(2000));
     }
 }
 
@@ -61,9 +67,7 @@ fn main() -> ! {
     Task::new()
         .name("print")
         .stack_size(2 * configMINIMAL_STACK_SIZE as u16)
-        .start(|| unsafe {
-            vPrintTask(ptr::null_mut());
-        })
+        .start(print_task)
         .unwrap();
 
     FreeRtosUtils::start_scheduler()
