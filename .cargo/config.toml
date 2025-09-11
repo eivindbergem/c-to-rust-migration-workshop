@@ -1,10 +1,9 @@
 [target.'cfg(all(target_arch = "arm", target_os = "none"))']
 runner = 'probe-rs run --chip STM32F103C8'
-linker = "arm-none-eabi-gcc"
 rustflags = [
-  "-C", "link-arg=-llegacy",
-  "-C", "link-arg=-Tdefmt.x",
+  "-C", "link-arg=--nmagic",
   "-C", "link-arg=-Tlink.x",
+  "-C", "link-arg=-Tdefmt.x",
 ]
 
 [build]
