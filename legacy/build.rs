@@ -24,20 +24,6 @@ fn main() {
         .define("USE_HAL_LIBRARY", None)
         .includes(includes)
         .files(
-            Path::new("blinky/src")
-                .read_dir()
-                .unwrap()
-                .filter_map(|entry| {
-                    let path = entry.unwrap().path();
-
-                    if path.extension().is_some_and(|ext| ext == "c") {
-                        Some(path)
-                    } else {
-                        None
-                    }
-                }),
-        )
-        .files(
             ["system_stm32f1xx.c", "gcc/startup_stm32f103xb.s"]
                 .into_iter()
                 .map(|path| {
@@ -102,7 +88,6 @@ fn main() {
                 .iter()
                 .map(|path| format!("-I{}", path.to_string_lossy())),
         )
-        .clang_arg("-I/usr/include/newlib")
         .clang_arg("-DSTM32F103xB")
         .header("src/wrapper.h")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
