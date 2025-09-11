@@ -2,10 +2,11 @@
 #![no_main]
 #![feature(allocator_api)]
 
+use defmt_rtt as _;
 use embedded_hal::digital::StatefulOutputPin;
 use freertos_rust::{CurrentTask, Duration, FreeRtosAllocator, FreeRtosUtils, Task};
 use gpio::Pin;
-use legacy::{configMINIMAL_STACK_SIZE, SEGGER_RTT_Init};
+use legacy::configMINIMAL_STACK_SIZE;
 use stm32f1xx_hal::{
     pac,
     prelude::*,
@@ -13,7 +14,6 @@ use stm32f1xx_hal::{
 };
 
 mod gpio;
-mod rtt;
 
 #[global_allocator]
 static GLOBAL: FreeRtosAllocator = FreeRtosAllocator;
@@ -33,17 +33,13 @@ where
 
 fn print_task() {
     loop {
-        println!("Hello world");
+        defmt::println!("Hello world");
         CurrentTask::delay(Duration::ms(2000));
     }
 }
 
 #[unsafe(no_mangle)]
 fn main() -> ! {
-    unsafe {
-        SEGGER_RTT_Init();
-    }
-
     let dp = pac::Peripherals::take().unwrap();
     let mut flash = dp.FLASH.constrain();
     let mut rcc = dp.RCC.constrain().freeze(

@@ -6,6 +6,7 @@ rustflags = [
   "-C", "link-arg=-mcpu=cortex-m3",
   "-C", "link-arg=-mabi=aapcs",
   "-C", "link-arg=-Tlegacy/toolchain/STM32F103VB_FLASH.ld",
+  "-C", "link-arg=-Tdefmt.x",
 ]
 
 [build]
