@@ -25,29 +25,6 @@ void vPrintTask(void *pvParameters) {
   }
 }
 
-static void MX_GPIO_Init(void);
-static void MX_TIM1_Init(void);
-
-int main(void) {
-  HAL_Init();
-
-  SystemClock_Config();
-  MX_GPIO_Init();
-
-  SEGGER_RTT_Init();
-
-  xTaskCreate(vBlinkTask, "blink", 2*configMINIMAL_STACK_SIZE, NULL,
-              3, NULL);
-
-  xTaskCreate(vPrintTask, "semi", 3*configMINIMAL_STACK_SIZE, NULL,
-              2, NULL);
-
-  vTaskStartScheduler();
-
-  for (;;)
-    ;
-}
-
 void SystemClock_Config(void) {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
@@ -83,7 +60,7 @@ void SystemClock_Config(void) {
  * @param None
  * @retval None
  */
-static void MX_GPIO_Init(void) {
+void MX_GPIO_Init(void) {
   GPIO_InitTypeDef gpio = {0};
 
   /* GPIO Ports Clock Enable */

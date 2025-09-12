@@ -1,4 +1,7 @@
-use std::path::Path;
+use std::{
+    env,
+    path::{Path, PathBuf},
+};
 
 fn main() {
     let cube_path = Path::new("thirdparty/STM32CubeF1");
@@ -87,4 +90,23 @@ fn main() {
             .map(|path| rtos_path.join("Source").join(path)),
         )
         .compile("legacy");
+
+    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+
+    bindgen::Builder::default()
+        .use_core()
+        .clang_macro_fallback()
+        .clang_args(
+            includes
+                .iter()
+                .map(|path| format!("-I{}", path.to_string_lossy())),
+        )
+        .clang_arg("-I/usr/include/newlib")
+        .clang_arg("-DSTM32F103xB")
+        .header("src/wrapper.h")
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+        .generate()
+        .unwrap()
+        .write_to_file(out_dir.join("bindings.rs"))
+        .unwrap();
 }
