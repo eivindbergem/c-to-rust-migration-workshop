@@ -1,60 +1,67 @@
 # Migrating an embedded C application to Rust
 
-## Part 3 – Convert main function to Rust
+## Part 4 - Use `freertos_rust` bindings
 
-With the build system in place, we can finally start migrating some of
-the code into Rust. We're doing a top down migration, starting with
-the main function.
+Interacting with the FreeRTOS C API is not very ergonomical. Luckily
+for us, there is a crate with [safe Rust bindings to
+FreeRTOS](https://docs.rs/freertos-rust/latest/freertos_rust/).
 
-### Rust bindings to C
+### Setting up `freertos_rust`
 
-In order to call C from Rust, we need to know what functions are
-defined in the C code. We will use
-[`bindgen`](https://docs.rs/bindgen/latest/bindgen/) generate Rust
-bindings from C header files.
-
-Add `bindgen` as build dependency in the `legacy` crate:
+Add `freertos_rust` as a dependency to the `blinky` crate:
 
 ```console
-$ cargo add --build bindgen
+$ cargo add freertos_rust
 ```
 
-Create file `legacy/src/wrapper.h`, that includes all the header files
-we need to access from Rust.
-
-In `build.rs`, use `bindgen::Builder` to create bindings from
-`wrapper.h`. Export the file as `bindings.rs` in `$OUT_DIR` (use
-[`std::env::var`](https://doc.rust-lang.org/std/env/fn.var.html) to
-get environment variables).
-
-The default constant macro parser in `bindgen` fails to parse some
-constants that we need, but we can use `.clang_macro_fallback()` to
-use clang for constant macro parsing.
-
-In `legacy/src/lib.rs`, import the bindings:
-```Rust
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-```
-
-The C naming convention will result in a lot of warnings, but we can
-add some attributes to `lib.rs` to ignore these:
+In `legacy/build.rs`, build the FreeRTOS shim together with the legacy
+library. Add this line to `cc::Builder`:
 
 ```Rust
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
+.file(PathBuf::from(env::var("DEP_FREERTOS_SHIM").unwrap()).join("shim.c"))
 ```
 
-### Move `main()` to Rust
+`freertos_rust` uses the heap allocated version variant of FreeRTOS
+and requires us to configure the FreeRTOS heap as the global Rust
+allocator. The [allocator
+API](https://doc.rust-lang.org/beta/unstable-book/library-features/allocator-api.html)
+is currently unstable, so we need to use the nightly compiler. Add a
+file called `rust-toolchain.toml` with the following contents in the
+project root:
 
-Update `main.h` to include all functions used in `main()`.
+```
+[toolchain]
+channel = "nightly"
+```
 
-Copy the main function from C to Rust, and convert it to valid
-Rust. All C code is considered unsafe, so we wrap the whole function
-body in an [`unsafe`
-block](https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html).
+In addition, we have to enable the unstable feature, by adding this to `main.rs`:
 
-For NULL pointers, we can use `core::ptr::null_mut()`.
+```Rust
+#![feature(allocator_api)]
+```
 
-Annotate the Rust `main()` with `#[unsafe(no_mangle)]` to disable name
-mangling.
+Now, we can add the allocator in `main.rs`:
+
+```Rust
+#[global_allocator]
+static GLOBAL: FreeRtosAllocator = FreeRtosAllocator;
+```
+
+I'm not sure why, but after switching to `freertos_rust` we get
+linking errors complaining about missing `abort`. We can define it in `main.rs` to make it go away:
+
+```Rust
+#[unsafe(no_mangle)]
+pub extern "C" fn abort() -> ! {
+    loop {}
+}
+```
+
+### Using `freertos_rust`
+
+Now, we can start converting the calls to `xTaskCreate()` and
+`vTaskStartScheduler()` to their `freertos_rust` counter parts. We'll
+leave the task functions themselves in C. Note that the FreeRTOS tasks
+in C takes an argument, but the ones in Rust don't. We can use a
+[closure](https://doc.rust-lang.org/book/ch20-04-advanced-functions-and-closures.html)
+to call the C function with a NULL pointer.

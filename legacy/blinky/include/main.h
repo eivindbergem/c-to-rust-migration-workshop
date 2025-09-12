@@ -8,4 +8,8 @@
 #define led_GPIO_Port GPIOC
 void SystemClock_Config(void);
 void Error_Handler(void);
+void vBlinkTask(void *pvParameters);
+void vPrintTask(void *pvParameters);
+void MX_TIM1_Init(void);
+void MX_GPIO_Init(void);
 #endif
